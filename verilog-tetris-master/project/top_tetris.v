@@ -21,7 +21,7 @@ module tetris(
 
     wire [11:0] rgb;
     assign {vgaRed, vgaGreen, vgaBlue} = rgb;
-    //sssss
+    
 
 
 
