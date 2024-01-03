@@ -26,10 +26,8 @@ module vga_display(
     reg [2:0] cur_vid_mem;
     always @ (*) begin
         // Check if we're within the drawing space
-        if (counter_x >= `BOARD_X && counter_y >= `BOARD_Y &&
-            counter_x <= `BOARD_X + `BOARD_WIDTH && counter_y <= `BOARD_Y + `BOARD_HEIGHT) begin
-            if (counter_x == `BOARD_X || counter_x == `BOARD_X + `BOARD_WIDTH ||
-                counter_y == `BOARD_Y || counter_y == `BOARD_Y + `BOARD_HEIGHT) begin
+        if (counter_x >= `BOARD_X && counter_y >= `BOARD_Y && counter_x <= `BOARD_X + `BOARD_WIDTH && counter_y <= `BOARD_Y + `BOARD_HEIGHT) begin
+            if (counter_x == `BOARD_X || counter_x == `BOARD_X + `BOARD_WIDTH || counter_y == `BOARD_Y || counter_y == `BOARD_Y + `BOARD_HEIGHT) begin
                 // We're at the edge of the board, paint it white
                 //*![*]my modify
                 //rgb = `WHITE;

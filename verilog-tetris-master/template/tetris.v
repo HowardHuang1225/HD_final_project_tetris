@@ -1,23 +1,49 @@
 `include "definitions.vh"
 
 module tetris(
-    input wire        clk_too_fast,
-    input wire        btn_drop,
-    input wire        btn_rotate,
-    input wire        btn_left,
-    input wire        btn_right,
-    input wire        btn_down,
+    input wire        clk,
+    input wire        btn_rst,
+    input wire        btn_volup,
+    input wire        btn_voldown,
+    input wire        btn_start,
     input wire        sw_pause,
-    input wire        sw_rst,
-    output wire [11:0] rgb,
+    input wire        sw_mute,
+    output wire [3:0] vgaRed,
+    output wire [3:0] vgaGreen,
+    output wire [3:0] vgaBlue,
     output wire       hsync,
     output wire       vsync,
-    output wire [6:0] seg,
-    output wire [3:0] an,
+    output wire [6:0] display,
+    output wire [3:0] digit,
     inout wire PS2_DATA,
-	inout wire PS2_CLK
+	inout wire PS2_CLK,
+
+
+
+    output audio_mclk, // master clock
+    output audio_lrck, // left-right clock
+    output audio_sck,  // serial clock
+    output audio_sdin // serial audio data input
     );
 
+    // The mode, used for finite state machine things. We also
+    // need to store the old mode occasionally, like when we're paused.
+    reg [`MODE_BITS-1:0] mode;
+    reg [`MODE_BITS-1:0] old_mode;
+    // The game clock
+    wire game_clk;
+    // The game clock reset
+    reg game_clk_rst;
+
+    wire [11:0] rgb;
+
+    assign {vgaRed,vgaGreen,vgaBlue} = rgb;
+
+    wire clkDiv22;
+    wire clkDiv2;
+
+    clock_divider #(.n(22)) clock_22(.clk(clk), .clk_div(clkDiv22));    // for audio
+    clock_divider #(.n(2)) clock_2(.clk(clk), .clk_div(clkDiv2));    // for game、7seg
 
 
     wire [511:0] key_down;
@@ -30,23 +56,11 @@ module tetris(
         .key_valid(been_ready),
         .PS2_DATA(PS2_DATA),
         .PS2_CLK(PS2_CLK),
-        .rst(sw_rst),
-        .clk(clk)
+        .rst(btn_rst),
+        .clk(clkDiv2)
 	);
 
-    // Divides the clock into 25 MHz
-    reg clk_count;
-    reg clk;
-    initial begin
-        clk_count = 0;
-        clk = 0;
-    end
-    always @ (posedge clk_too_fast) begin
-        clk_count <= ~clk_count;
-        if (clk_count) begin
-            clk <= ~clk;
-        end
-    end
+
 
     // Increments once per cycle to a maximum value. If this is
     // not yet at the maximum value, we cannot go into drop mode.
@@ -60,63 +74,66 @@ module tetris(
     // making it effectively random.
     wire [`BITS_PER_BLOCK-1:0] random_piece;
     randomizer randomizer_ (
-        .clk(clk),
+        .clk(clkDiv2),
         .random(random_piece)
     );
 
     // The enable signals for the five buttons, after
     // they have gone through the debouncer. Should only be high
     // for one cycle for each button press.
-    wire btn_drop_en;
-    wire btn_rotate_en;
-    wire btn_left_en;
-    wire btn_right_en;
-    wire btn_down_en;
+    wire btn_rst_en;
+    wire btn_volup_en;
+    wire btn_voldown_en;
+    wire btn_start_en;
+
     // Debounce all of the input signals
-    debouncer debouncer_btn_drop_ (
-        .raw(btn_drop),
+    debouncer debouncer_btn_rst_ (
+        .raw(btn_rst),
         .clk(clk),
-        .enabled(btn_drop_en)
+        .enabled(btn_rst_en)
     );
-    debouncer debouncer_btn_rotate_ (
-        .raw(btn_rotate),
+    debouncer debouncer_btn_volup_ (
+        .raw(btn_volup),
         .clk(clk),
-        .enabled(btn_rotate_en)
+        .enabled(btn_volup_en)
     );
-    debouncer debouncer_btn_left_ (
-        .raw(btn_left),
+    debouncer debouncer_btn_voldown_ (
+        .raw(btn_voldown),
         .clk(clk),
-        .enabled(btn_left_en)
+        .enabled(btn_voldown_en)
     );
-    debouncer debouncer_btn_right_ (
-        .raw(btn_right),
+    debouncer debouncer_btn_start_ (
+        .raw(btn_start),
         .clk(clk),
-        .enabled(btn_right_en)
-    );
-    debouncer debouncer_btn_down_ (
-        .raw(btn_down),
-        .clk(clk),
-        .enabled(btn_down_en)
+        .enabled(btn_start_en)
     );
 
-    // Sets up wires for the pause and reset switch enable
-    // and disable signals, and debounces the asynchronous input.
-    wire sw_pause_en;
-    wire sw_pause_dis;
-    wire sw_rst_en;
-    wire sw_rst_dis;
-    debouncer debouncer_sw_pause_ (
-        .raw(sw_pause),
-        .clk(clk),
-        .enabled(sw_pause_en),
-        .disabled(sw_pause_dis)
-    );
-    debouncer debouncer_sw_rst_ (
-        .raw(sw_rst),
-        .clk(clk),
-        .enabled(sw_rst_en),
-        .disabled(sw_rst_dis)
-    );
+
+    wire rst_1pulse;
+    wire volup_1pulse;
+    wire voldown_1pulse;
+    wire start_1pulse;
+    one_pulse op1 (.pb_in(btn_rst_en), .clk(clk), .pb_out(rst_1pulse));
+    one_pulse op2 (.pb_in(btn_volup_en), .clk(clk), .pb_out(volup_1pulse));
+    one_pulse op3 (.pb_in(btn_voldown_en), .clk(clk), .pb_out(voldown_1pulse));
+    one_pulse op4 (.pb_in(btn_start_en), .clk(clk), .pb_out(start_1pulse));
+
+
+
+
+    music music0(
+    .clk(clk),
+    .rst(btn_rst),        // BTNC: active high reset
+    ._mute(sw_mute),      // SW14: Mute
+    ._mode(mode),      // SW15: Mode
+    ._volUP(btn_volup),     // BTNU: Vol up
+    ._volDOWN(btn_voldown),   // BTND: Vol down
+    .audio_mclk(audio_mclk), // master clock
+    .audio_lrck(audio_lrck), // left-right clock
+    .audio_sck(audio_sck),  // serial clock
+    .audio_sdin(audio_sdin) // serial audio data input
+    );      
+
 
     // A memory bank for storing 1 bit for each board position.
     // If the fallen_pieces memory is 1, there is a block still that
@@ -163,7 +180,7 @@ module tetris(
     // board that it covers. We also pass in fallen_pieces so that it can
     // display the fallen tetromino squares in monochrome.
     vga_display display_ (
-        .clk(clk),
+        .clk(clkDiv2),
         .cur_piece(cur_piece),
         .cur_blk_1(cur_blk_1),
         .cur_blk_2(cur_blk_2),
@@ -175,19 +192,12 @@ module tetris(
         .vsync(vsync)
     );
 
-    // The mode, used for finite state machine things. We also
-    // need to store the old mode occasionally, like when we're paused.
-    reg [`MODE_BITS-1:0] mode;
-    reg [`MODE_BITS-1:0] old_mode;
-    // The game clock
-    wire game_clk;
-    // The game clock reset
-    reg game_clk_rst;
+    
 
     // This module outputs the game clock, which is when the clock
     // that determines when the tetromino falls by itself.
     game_clock game_clock_ (
-        .clk(clk),
+        .clk(clkDiv2),
         .rst(game_clk_rst),
         .pause(mode != `MODE_PLAY),
         .game_clk(game_clk)
@@ -207,18 +217,22 @@ module tetris(
         .mode(mode),
         .game_clk_rst(game_clk_rst),
         .game_clk(game_clk),
-        .btn_left_en(btn_left_en),
-        .btn_right_en(btn_right_en),
-        .btn_rotate_en(btn_rotate_en),
-        .btn_down_en(btn_down_en),
-        .btn_drop_en(btn_drop_en),
+        
         .cur_pos_x(cur_pos_x),
         .cur_pos_y(cur_pos_y),
         .cur_rot(cur_rot),
         .test_pos_x(test_pos_x),
         .test_pos_y(test_pos_y),
-        .test_rot(test_rot)
+        .test_rot(test_rot),
+        .been_ready(been_ready),
+        .last_change(last_change),
+        .key_down(keydown)
     );
+    // .btn_left_en(btn_left_en),
+    //     .btn_right_en(btn_right_en),
+    //     .btn_rotate_en(btn_rotate_en),
+    //     .btn_down_en(btn_down_en),
+    //     .btn_drop_en(btn_drop_en),
     // Set up the outputs for the calc_test_blk module
     wire [`BITS_BLK_POS-1:0] test_blk_1;
     wire [`BITS_BLK_POS-1:0] test_blk_2;
@@ -280,8 +294,8 @@ module tetris(
     // block to go off screen and would not intersect with any fallen blocks.
     task rotate;
         begin
-            if (cur_pos_x + test_width <= `BLOCKS_WIDE &&
-                cur_pos_y + test_height <= `BLOCKS_HIGH &&
+            if (cur_pos_x + test_width < `BLOCKS_WIDE &&
+                cur_pos_y + test_height < `BLOCKS_HIGH &&
                 !test_intersects) begin
                 cur_rot <= cur_rot + 1;
             end
@@ -346,20 +360,20 @@ module tetris(
     reg [3:0] score_4; // 1000's place
     // The 7-segment display module, which outputs the score
     seg_display score_display_ (
-        .clk(clk),
+        .clk(clkDiv2),
         .score_1(score_1),
         .score_2(score_2),
         .score_3(score_3),
         .score_4(score_4),
-        .an(an),
-        .seg(seg)
+        .an(digit),
+        .seg(display)
     );
     // The module that determines which row, if any, is complete
     // and needs to be removed and the score incremented
     wire [`BITS_Y_POS-1:0] remove_row_y;
     wire remove_row_en;
     complete_row complete_row_ (
-        .clk(clk),
+        .clk(clkDiv2),
         .pause(mode != `MODE_PLAY),
         .fallen_pieces(fallen_pieces),
         .row(remove_row_y),
@@ -431,43 +445,49 @@ module tetris(
     wire game_over = cur_pos_y == 0 && intersects_fallen_pieces(cur_blk_1, cur_blk_2, cur_blk_3, cur_blk_4);
 
     // Main game logic
-    always @ (posedge clk) begin
+    always @ (posedge clkDiv2 or posedge btn_rst) begin
         if (drop_timer < `DROP_TIMER_MAX) begin
             drop_timer <= drop_timer + 1;
         end
         game_clk_rst <= 0;
-        if (mode == `MODE_IDLE && (sw_rst_en || sw_rst_dis)) begin
+        if (mode == `MODE_IDLE && (start_1pulse==1)) begin
             // We are in idle mode and the user has requested to start the game
             start_game();
-        end else if (sw_rst_en || sw_rst_dis || game_over) begin
+        end else if (btn_rst || game_over) begin
             // We hit the reset switch or the game ended by itself,
             // go into idle mode where we wait for the user to press a button
             mode <= `MODE_IDLE;
             add_to_fallen_pieces();
             cur_piece <= `EMPTY_BLOCK;
-        end else if ((sw_pause_en || sw_pause_dis) && mode == `MODE_PLAY) begin
+        end else if ((sw_pause==1) && mode == `MODE_PLAY) begin
             // If we switch on pause, save the old mode and enter
             // the pause mode.
             mode <= `MODE_PAUSE;
             old_mode <= mode;
-        end else if ((sw_pause_en || sw_pause_dis) && mode == `MODE_PAUSE) begin
+        end else if ((sw_pause==0) && mode == `MODE_PAUSE) begin
             // If we switch off pause, enter the old mode
             mode <= old_mode;
         end else if (mode == `MODE_PLAY) begin
             // Normal gameplay
             if (game_clk) begin
                 move_down();
-            end else if (btn_left_en) begin
-                move_left();
-            end else if (btn_right_en) begin
-                move_right();
-            end else if (btn_rotate_en) begin
-                rotate();
-            end else if (btn_down_en) begin
-                move_down();
-            end else if (btn_drop_en && drop_timer == `DROP_TIMER_MAX) begin
-                drop_to_bottom();
-            end else if (remove_row_en) begin
+            end 
+            // else if (btn_left_en) begin
+            //     move_left();
+            // end 
+            // else if (btn_right_en) begin
+            //     move_right();
+            // end 
+            // else if (btn_rotate_en) begin
+            //     rotate();
+            // end 
+            // else if (btn_down_en) begin
+            //     move_down();
+            // end 
+            // else if (btn_drop_en && drop_timer == `DROP_TIMER_MAX) begin
+            //     drop_to_bottom();
+            // end 
+            else if (remove_row_en) begin
                 remove_row();
             end
             else if(been_ready && key_down[last_change]) begin
@@ -483,14 +503,14 @@ module tetris(
                 else if(last_change==9'b0_0001_1101) begin  //W => rotate
                     rotate();
                 end
-                else if(last_change==9'b0_0001_1011) begin  //S => rotate
+                else if(last_change==9'b0_0001_1011) begin  //S => down
                     move_down();
                 end
             end
         end else if (mode == `MODE_DROP) begin
             // We are dropping the block until we hit respawn
             // at the top
-            if (game_clk_rst && !sw_pause_en) begin
+            if (game_clk_rst && !sw_pause) begin
                 mode <= `MODE_PLAY;
             end else begin
                 move_down();

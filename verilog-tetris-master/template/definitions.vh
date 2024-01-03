@@ -66,15 +66,15 @@
 // `define RED 8'b00000111
 // `define BLUE 8'b11000000
 // `define ORANGE 8'b00011111
-`define WHITE 12'hFFF //*! 注意 rgb pin 接反了
-`define BLACK 12'h000
-`define GRAY 12'h808
-`define CYAN 12'h0FF
+`define WHITE  12'hFFF //*! 注意 rgb pin 接反了
+`define BLACK  12'h000
+`define GRAY   12'h888
+`define CYAN   12'h0FF
 `define YELLOW 12'hFF0
 `define PURPLE 12'hF0F
-`define GREEN 12'h080
-`define RED 12'hF00
-`define BLUE 12'h00F
+`define GREEN  12'h080
+`define RED    12'hF00
+`define BLUE   12'h00F
 `define ORANGE 12'hFA0
 
 
@@ -84,6 +84,7 @@
 
 // Modes
 `define MODE_BITS 3
+
 `define MODE_PLAY 0
 `define MODE_DROP 1
 `define MODE_PAUSE 2
