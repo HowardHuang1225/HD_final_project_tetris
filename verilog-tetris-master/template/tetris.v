@@ -89,22 +89,22 @@ module tetris(
     // Debounce all of the input signals
     debouncer debouncer_btn_rst_ (
         .raw(btn_rst),
-        .clk(clk),
+        .clk(clkDiv2),
         .enabled(btn_rst_en)
     );
     debouncer debouncer_btn_volup_ (
         .raw(btn_volup),
-        .clk(clk),
+        .clk(clkDiv2),
         .enabled(btn_volup_en)
     );
     debouncer debouncer_btn_voldown_ (
         .raw(btn_voldown),
-        .clk(clk),
+        .clk(clkDiv2),
         .enabled(btn_voldown_en)
     );
     debouncer debouncer_btn_start_ (
         .raw(btn_start),
-        .clk(clk),
+        .clk(clkDiv2),
         .enabled(btn_start_en)
     );
 
@@ -113,10 +113,10 @@ module tetris(
     wire volup_1pulse;
     wire voldown_1pulse;
     wire start_1pulse;
-    one_pulse op1 (.pb_in(btn_rst_en), .clk(clk), .pb_out(rst_1pulse));
-    one_pulse op2 (.pb_in(btn_volup_en), .clk(clk), .pb_out(volup_1pulse));
-    one_pulse op3 (.pb_in(btn_voldown_en), .clk(clk), .pb_out(voldown_1pulse));
-    one_pulse op4 (.pb_in(btn_start_en), .clk(clk), .pb_out(start_1pulse));
+    one_pulse op1 (.pb_in(btn_rst_en), .clk(clkDiv2), .pb_out(rst_1pulse));
+    one_pulse op2 (.pb_in(btn_volup_en), .clk(clkDiv2), .pb_out(volup_1pulse));
+    one_pulse op3 (.pb_in(btn_voldown_en), .clk(clkDiv2), .pb_out(voldown_1pulse));
+    one_pulse op4 (.pb_in(btn_start_en), .clk(clkDiv2), .pb_out(start_1pulse));
 
 
 
@@ -361,10 +361,10 @@ module tetris(
     // The 7-segment display module, which outputs the score
     seg_display score_display_ (
         .clk(clkDiv2),
-        .score_1(score_1),
-        .score_2(score_2),
-        .score_3(score_3),
-        .score_4(score_4),
+        .score_1(mode!=`MODE_PLAY?11:score_1),
+        .score_2(mode!=`MODE_PLAY?11:score_2),
+        .score_3(mode!=`MODE_PLAY?11:score_3),
+        .score_4(mode!=`MODE_PLAY?11:score_4),
         .an(digit),
         .seg(display)
     );
@@ -445,15 +445,15 @@ module tetris(
     wire game_over = cur_pos_y == 0 && intersects_fallen_pieces(cur_blk_1, cur_blk_2, cur_blk_3, cur_blk_4);
 
     // Main game logic
-    always @ (posedge clkDiv2 or posedge btn_rst) begin
+    always @ (posedge clkDiv2) begin
         if (drop_timer < `DROP_TIMER_MAX) begin
             drop_timer <= drop_timer + 1;
         end
         game_clk_rst <= 0;
-        if (mode == `MODE_IDLE && (start_1pulse==1)) begin
+        if (mode == `MODE_IDLE && (start_1pulse)) begin
             // We are in idle mode and the user has requested to start the game
             start_game();
-        end else if (btn_rst || game_over) begin
+        end else if (rst_1pulse|| game_over) begin
             // We hit the reset switch or the game ended by itself,
             // go into idle mode where we wait for the user to press a button
             mode <= `MODE_IDLE;

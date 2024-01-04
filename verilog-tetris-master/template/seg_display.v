@@ -61,7 +61,8 @@ module seg_display(
                 6: seg <= 7'b0000010;
                 7: seg <= 7'b1111000;
                 8: seg <= 7'b0000000;
-                default: seg <= 7'b0010000;
+                9: seg <= 7'b0010000;
+                default: seg <= 7'b0111111;
             endcase
         end
     endtask
