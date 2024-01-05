@@ -6,8 +6,10 @@ module tetris(
     input wire        btn_volup,
     input wire        btn_voldown,
     input wire        btn_start,
+    input wire        btn_cheat,
     input wire        sw_pause,
     input wire        sw_mute,
+    input wire        sw_inferno,
     output wire [3:0] vgaRed,
     output wire [3:0] vgaGreen,
     output wire [3:0] vgaBlue,
@@ -15,15 +17,12 @@ module tetris(
     output wire       vsync,
     output wire [6:0] display,
     output wire [3:0] digit,
-    inout wire PS2_DATA,
-	inout wire PS2_CLK,
-
-
-
-    output audio_mclk, // master clock
-    output audio_lrck, // left-right clock
-    output audio_sck,  // serial clock
-    output audio_sdin // serial audio data input
+    inout wire        PS2_DATA,
+	inout wire        PS2_CLK,
+    output            audio_mclk, // master clock
+    output            audio_lrck, // left-right clock
+    output            audio_sck,  // serial clock
+    output            audio_sdin // serial audio data input
     );
 
     // The mode, used for finite state machine things. We also
@@ -62,6 +61,8 @@ module tetris(
 
 
 
+    
+
     // Increments once per cycle to a maximum value. If this is
     // not yet at the maximum value, we cannot go into drop mode.
     reg [31:0] drop_timer;
@@ -85,6 +86,7 @@ module tetris(
     wire btn_volup_en;
     wire btn_voldown_en;
     wire btn_start_en;
+    wire btn_cheat_en;
 
     // Debounce all of the input signals
     debouncer debouncer_btn_rst_ (
@@ -107,16 +109,23 @@ module tetris(
         .clk(clkDiv2),
         .enabled(btn_start_en)
     );
+    debouncer debouncer_btn_cheat_ (
+        .raw(btn_cheat),
+        .clk(clkDiv2),
+        .enabled(btn_rst_cheat)
+    );
 
 
     wire rst_1pulse;
     wire volup_1pulse;
     wire voldown_1pulse;
     wire start_1pulse;
+    wire cheat_1pulse;
     one_pulse op1 (.pb_in(btn_rst_en), .clk(clkDiv2), .pb_out(rst_1pulse));
     one_pulse op2 (.pb_in(btn_volup_en), .clk(clkDiv2), .pb_out(volup_1pulse));
     one_pulse op3 (.pb_in(btn_voldown_en), .clk(clkDiv2), .pb_out(voldown_1pulse));
     one_pulse op4 (.pb_in(btn_start_en), .clk(clkDiv2), .pb_out(start_1pulse));
+    one_pulse op5 (.pb_in(btn_cheat_en), .clk(clkDiv2), .pb_out(cheat_1pulse));
 
 
 
@@ -124,7 +133,7 @@ module tetris(
     music music0(
     .clk(clk),
     .rst(btn_rst),        // BTNC: active high reset
-    ._mute(sw_mute),      // SW14: Mute
+    ._mute(mode!=`MODE_PLAY ? 1:sw_mute),      // SW14: Mute
     ._mode(mode),      // SW15: Mode
     ._volUP(btn_volup),     // BTNU: Vol up
     ._volDOWN(btn_voldown),   // BTND: Vol down
@@ -193,6 +202,10 @@ module tetris(
     );
 
     
+    reg [3:0] score_1; // 1's place
+    reg [3:0] score_2; // 10's place
+    reg [3:0] score_3; // 100's place
+    reg [3:0] score_4; // 1000's place 
 
     // This module outputs the game clock, which is when the clock
     // that determines when the tetromino falls by itself.
@@ -200,7 +213,12 @@ module tetris(
         .clk(clkDiv2),
         .rst(game_clk_rst),
         .pause(mode != `MODE_PLAY),
-        .game_clk(game_clk)
+        .game_clk(game_clk),
+        .score1(score_1),
+        .score2(score_2),
+        .score3(score_3),
+        .score4(score_4),
+        .sw_inferno(sw_inferno)
     );
 
     // Set up some variables to test for intersection or off-screen-ness
@@ -354,10 +372,6 @@ module tetris(
 
     // The score register, increased by one when the user
     // completes a row.
-    reg [3:0] score_1; // 1's place
-    reg [3:0] score_2; // 10's place
-    reg [3:0] score_3; // 100's place
-    reg [3:0] score_4; // 1000's place
     // The 7-segment display module, which outputs the score
     seg_display score_display_ (
         .clk(clkDiv2),
