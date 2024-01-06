@@ -376,10 +376,10 @@ module tetris(
     // The 7-segment display module, which outputs the score
     seg_display score_display_ (
         .clk(clkDiv2),
-        .score_1(mode!=`MODE_PLAY?11:mode==`MODE_OVER? 15:score_1),
-        .score_2(mode!=`MODE_PLAY?11:mode==`MODE_OVER? 14:score_2),
-        .score_3(mode!=`MODE_PLAY?11:mode==`MODE_OVER? 13:score_3),
-        .score_4(mode!=`MODE_PLAY?11:mode==`MODE_OVER? 12:score_4),
+        .score_1(mode!=`MODE_PLAY? mode==`MODE_OVER? 15: 11:score_1),
+        .score_2(mode!=`MODE_PLAY? mode==`MODE_OVER? 14: 11:score_2),
+        .score_3(mode!=`MODE_PLAY? mode==`MODE_OVER? 13: 11:score_3),
+        .score_4(mode!=`MODE_PLAY? mode==`MODE_OVER? 12: 11:score_4),
         .an(digit),
         .seg(display)
     );

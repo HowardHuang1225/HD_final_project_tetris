@@ -58,7 +58,7 @@ module vga_display(
                         `L_BLOCK: rgb = `ORANGE;
                     endcase
                 end else begin
-                    rgb = fallen_pieces[cur_blk_index] ?  `WHITE : sw_inferno ? `BLACK : `GRAY;
+                    rgb = fallen_pieces[cur_blk_index] ?  sw_inferno ?`PINK:`WHITE : sw_inferno ? `BLACK : `GRAY;
                 end
             end
         end else begin

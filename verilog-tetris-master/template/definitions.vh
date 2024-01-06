@@ -76,6 +76,7 @@
 `define RED    12'hF00
 `define BLUE   12'h00F
 `define ORANGE 12'hFA0
+`define PINK 12'hE75480
 
 
 
