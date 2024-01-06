@@ -485,22 +485,11 @@ module tetris(
             // Normal gameplay
             if (game_clk) begin
                 move_down();
+                if(sw_inferno) begin
+                    rotate();
+                end
             end 
-            // else if (btn_left_en) begin
-            //     move_left();
-            // end 
-            // else if (btn_right_en) begin
-            //     move_right();
-            // end 
-            // else if (btn_rotate_en) begin
-            //     rotate();
-            // end 
-            // else if (btn_down_en) begin
-            //     move_down();
-            // end 
-            // else if (btn_drop_en && drop_timer == `DROP_TIMER_MAX) begin
-            //     drop_to_bottom();
-            // end 
+            
             else if (remove_row_en) begin
                 remove_row();
             end

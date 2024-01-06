@@ -6,7 +6,7 @@ module game_clock(
     input [3:0] score1,
     input [3:0] score2,
     input [3:0] score3,
-    input [3:0] score4
+    input [3:0] score4,
     input wire sw_inferno
     );
 
@@ -39,7 +39,7 @@ module game_clock(
             end
         end
         else begin
-            tmp = 1250000;
+            tmp = 3000000;
         end
     end
 
@@ -50,11 +50,11 @@ module game_clock(
                 counter <= 0;
                 game_clk <= 0;
             end else begin
-                if (counter == tmp) begin // 1 Hz
+                if (counter >= tmp) begin // 1 Hz
                     counter <= 0;
                     game_clk <= 1;
                 end else begin
-                    counter <= (counter + 1)%tmp;
+                    counter <= (counter + 1);
                     game_clk <= 0;
                 end
             end
