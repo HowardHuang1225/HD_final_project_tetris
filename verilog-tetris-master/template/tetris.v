@@ -198,7 +198,8 @@ module tetris(
         .fallen_pieces(fallen_pieces),
         .rgb(rgb),
         .hsync(hsync),
-        .vsync(vsync)
+        .vsync(vsync),
+        .sw_inferno(sw_inferno)
     );
 
     
@@ -375,10 +376,10 @@ module tetris(
     // The 7-segment display module, which outputs the score
     seg_display score_display_ (
         .clk(clkDiv2),
-        .score_1(mode!=`MODE_PLAY?11:score_1),
-        .score_2(mode!=`MODE_PLAY?11:score_2),
-        .score_3(mode!=`MODE_PLAY?11:score_3),
-        .score_4(mode!=`MODE_PLAY?11:score_4),
+        .score_1(mode!=`MODE_PLAY?11:mode==`MODE_OVER? 15:score_1),
+        .score_2(mode!=`MODE_PLAY?11:mode==`MODE_OVER? 14:score_2),
+        .score_3(mode!=`MODE_PLAY?11:mode==`MODE_OVER? 13:score_3),
+        .score_4(mode!=`MODE_PLAY?11:mode==`MODE_OVER? 12:score_4),
         .an(digit),
         .seg(display)
     );
@@ -467,10 +468,17 @@ module tetris(
         if (mode == `MODE_IDLE && (start_1pulse)) begin
             // We are in idle mode and the user has requested to start the game
             start_game();
-        end else if (rst_1pulse|| game_over) begin
+        end else if (mode == `MODE_OVER && (start_1pulse)) begin
+            // We are in idle mode and the user has requested to start the game
+            mode = `MODE_IDLE;
+        end else if (rst_1pulse) begin
             // We hit the reset switch or the game ended by itself,
             // go into idle mode where we wait for the user to press a button
             mode <= `MODE_IDLE;
+            add_to_fallen_pieces();
+            cur_piece <= `EMPTY_BLOCK;
+        end else if (game_over) begin
+            mode <= `MODE_OVER;
             add_to_fallen_pieces();
             cur_piece <= `EMPTY_BLOCK;
         end else if ((sw_pause==1) && mode == `MODE_PLAY) begin

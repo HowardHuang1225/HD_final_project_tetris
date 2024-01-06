@@ -90,6 +90,7 @@
 `define MODE_PAUSE 2
 `define MODE_IDLE 3
 `define MODE_SHIFT 4
+`define MODE_OVER 5
 
 // The maximum value of the drop timer
 `define DROP_TIMER_MAX 10000

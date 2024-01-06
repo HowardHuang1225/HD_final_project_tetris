@@ -10,7 +10,8 @@ module vga_display(
     input wire [(`BLOCKS_WIDE*`BLOCKS_HIGH)-1:0] fallen_pieces,
     output reg [11:0]                            rgb,
     output wire                                  hsync,
-    output wire                                  vsync
+    output wire                                  vsync,
+    input wire                                   sw_inferno
     );
 
     reg [9:0] counter_x = 0;
@@ -57,7 +58,7 @@ module vga_display(
                         `L_BLOCK: rgb = `ORANGE;
                     endcase
                 end else begin
-                    rgb = fallen_pieces[cur_blk_index] ? `WHITE : `GRAY;
+                    rgb = fallen_pieces[cur_blk_index] ?  `WHITE : sw_inferno ? `BLACK : `GRAY;
                 end
             end
         end else begin
