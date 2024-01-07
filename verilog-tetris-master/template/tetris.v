@@ -201,7 +201,9 @@ module tetris(
         .rgb(rgb),
         .hsync(hsync),
         .vsync(vsync),
-        .sw_inferno(sw_inferno)
+        .sw_inferno(sw_inferno),
+        .pause(mode != `MODE_PLAY)
+        ,.rst(game_clk_rst)
     );
 
     
@@ -229,48 +231,48 @@ module tetris(
     // followed through. For example, if the user presses the left button,
     // we test where the current piece would be if it was moved one to the
     // left, i.e. x = x - 1.
-    wire [`BITS_X_POS-1:0] test_pos_x;
-    wire [`BITS_Y_POS-1:0] test_pos_y;
-    wire [`BITS_ROT-1:0] test_rot;
-    // Combinational logic to determine what position/rotation we are testing.
-    // This has been hoisted out into a module so that the code is shorter.
-    calc_test_pos_rot calc_test_pos_rot_ (
-        .mode(mode),
-        .game_clk_rst(game_clk_rst),
-        .game_clk(game_clk),
+    // wire [`BITS_X_POS-1:0] test_pos_x;
+    // wire [`BITS_Y_POS-1:0] test_pos_y;
+    // wire [`BITS_ROT-1:0] test_rot;
+    // // Combinational logic to determine what position/rotation we are testing.
+    // // This has been hoisted out into a module so that the code is shorter.
+    // calc_test_pos_rot calc_test_pos_rot_ (
+    //     .mode(mode),
+    //     .game_clk_rst(game_clk_rst),
+    //     .game_clk(game_clk),
         
-        .cur_pos_x(cur_pos_x),
-        .cur_pos_y(cur_pos_y),
-        .cur_rot(cur_rot),
-        .test_pos_x(test_pos_x),
-        .test_pos_y(test_pos_y),
-        .test_rot(test_rot),
-        .been_ready(been_ready),
-        .last_change(last_change),
-        .key_down(keydown)
-        ,.piece(cur_piece)
-    );
+    //     .cur_pos_x(cur_pos_x),
+    //     .cur_pos_y(cur_pos_y),
+    //     .cur_rot(cur_rot),
+    //     .test_pos_x(test_pos_x),
+    //     .test_pos_y(test_pos_y),
+    //     .test_rot(test_rot),
+    //     .been_ready(been_ready),
+    //     .last_change(last_change),
+    //     .key_down(keydown)
+    //     ,.piece(cur_piece)
+    // );
     
 
      
-    wire [`BITS_BLK_POS-1:0] test_blk_1;
-    wire [`BITS_BLK_POS-1:0] test_blk_2;
-    wire [`BITS_BLK_POS-1:0] test_blk_3;
-    wire [`BITS_BLK_POS-1:0] test_blk_4;
-    wire [`BITS_BLK_SIZE-1:0] test_width;
-    wire [`BITS_BLK_SIZE-1:0] test_height;
-    calc_cur_blk calc_test_block_ (
-        .piece(cur_piece),
-        .pos_x(test_pos_x),
-        .pos_y(test_pos_y),
-        .rot(test_rot),
-        .blk_1(test_blk_1),
-        .blk_2(test_blk_2),
-        .blk_3(test_blk_3),
-        .blk_4(test_blk_4),
-        .width(test_width),
-        .height(test_height)
-    );
+    // wire [`BITS_BLK_POS-1:0] test_blk_1;
+    // wire [`BITS_BLK_POS-1:0] test_blk_2;
+    // wire [`BITS_BLK_POS-1:0] test_blk_3;
+    // wire [`BITS_BLK_POS-1:0] test_blk_4;
+    // wire [`BITS_BLK_SIZE-1:0] test_width;
+    // wire [`BITS_BLK_SIZE-1:0] test_height;
+    // calc_cur_blk calc_test_block_ (
+    //     .piece(cur_piece),
+    //     .pos_x(test_pos_x),
+    //     .pos_y(test_pos_y),
+    //     .rot(test_rot),
+    //     .blk_1(test_blk_1),
+    //     .blk_2(test_blk_2),
+    //     .blk_3(test_blk_3),
+    //     .blk_4(test_blk_4),
+    //     .width(test_width),
+    //     .height(test_height)
+    // );
 
     // This function checks whether its input block positions intersect
     // with any fallen pieces.
@@ -289,12 +291,19 @@ module tetris(
 
     // This signal goes high when the test positions/rotations intersect with
     // fallen blocks.
-    wire test_intersects = intersects_fallen_pieces(test_blk_1, test_blk_2, test_blk_3, test_blk_4);
+    // wire test_intersects = intersects_fallen_pieces(test_blk_1, test_blk_2, test_blk_3, test_blk_4);
 
     // If the falling piece can be moved left, moves it left
     task move_left;
         begin
-            if (cur_pos_x > 0 && !test_intersects) begin
+            if (cur_pos_x > 0 
+            // && !test_intersects
+            ) begin
+                if (!fallen_pieces[cur_blk_1 - 1]
+                && !fallen_pieces[cur_blk_2 - 1]
+                && !fallen_pieces[cur_blk_3 - 1]
+                && !fallen_pieces[cur_blk_4 - 1]
+                )                
                 cur_pos_x <= cur_pos_x - 1;
             end
         end
@@ -303,7 +312,14 @@ module tetris(
     // If the falling piece can be moved right, moves it right
     task move_right;
         begin
-            if (cur_pos_x + cur_width < `BLOCKS_WIDE && !test_intersects) begin
+            if (cur_pos_x + cur_width < `BLOCKS_WIDE
+            //  && !test_intersects
+             ) begin
+                if (!fallen_pieces[cur_blk_1 + 1]
+                && !fallen_pieces[cur_blk_2 + 1]
+                && !fallen_pieces[cur_blk_3 + 1]
+                && !fallen_pieces[cur_blk_4 + 1]
+                )  
                 cur_pos_x <= cur_pos_x + 1;
             end
         end
@@ -313,9 +329,10 @@ module tetris(
     // block to go off screen and would not intersect with any fallen blocks.
         task rotate;
         begin
-            if (cur_pos_x + test_width <= `BLOCKS_WIDE &&
-                cur_pos_y + test_height <= `BLOCKS_HIGH &&
-                !test_intersects) begin
+            if (cur_pos_x + cur_width <= `BLOCKS_WIDE &&
+                cur_pos_y + cur_height <= `BLOCKS_HIGH
+                // !test_intersects
+                ) begin
                 if (cur_piece == `I_BLOCK) begin
                     if (cur_rot == 3) begin
                         cur_pos_x <= cur_pos_x + 1;
@@ -484,7 +501,14 @@ module tetris(
     // the piece would go off the board or intersect with another block.
     task move_down;
         begin
-            if (cur_pos_y + cur_height < `BLOCKS_HIGH && !test_intersects) begin
+            if (cur_pos_y + cur_height < `BLOCKS_HIGH
+            //  && !test_intersects
+                && (cur_blk_1 < 210 && !fallen_pieces[cur_blk_1 + `BLOCKS_WIDE])
+                && (cur_blk_2 < 210 && !fallen_pieces[cur_blk_2 + `BLOCKS_WIDE])
+                && (cur_blk_3 < 210 && !fallen_pieces[cur_blk_3 + `BLOCKS_WIDE])
+                && (cur_blk_4 < 210 && !fallen_pieces[cur_blk_4 + `BLOCKS_WIDE])
+            ) begin
+                
                 cur_pos_y <= cur_pos_y + 1;
             end else begin
                 add_to_fallen_pieces();
@@ -507,10 +531,10 @@ module tetris(
     // The 7-segment display module, which outputs the score
     seg_display score_display_ (
         .clk(clkDiv2),
-        .score_1(mode!=`MODE_PLAY? mode==`MODE_OVER? 15: mode==`MODE_SUCCESS? 5:11: sw_inferno&&mode==`MODE_PLAY ? 8:score_1),
-        .score_2(mode!=`MODE_PLAY? mode==`MODE_OVER? 14: mode==`MODE_SUCCESS? 5:11: sw_inferno&&mode==`MODE_PLAY ? 8:score_2),
-        .score_3(mode!=`MODE_PLAY? mode==`MODE_OVER? 13: mode==`MODE_SUCCESS? 5:11: sw_inferno&&mode==`MODE_PLAY ? 8:score_3),
-        .score_4(mode!=`MODE_PLAY? mode==`MODE_OVER? 12: mode==`MODE_SUCCESS? 5:11: sw_inferno&&mode==`MODE_PLAY ? 8:score_4),
+        .score_1(mode!=`MODE_PLAY? mode==`MODE_OVER? 15: mode==`MODE_SUCCESS? 5:11: sw_inferno && mode == `MODE_PLAY ? 9:score_1),
+        .score_2(mode!=`MODE_PLAY? mode==`MODE_OVER? 14: mode==`MODE_SUCCESS? 5:11: sw_inferno && mode == `MODE_PLAY ? 9:score_2),
+        .score_3(mode!=`MODE_PLAY? mode==`MODE_OVER? 13: mode==`MODE_SUCCESS? 5:11: sw_inferno && mode == `MODE_PLAY ? 9:score_3),
+        .score_4(mode!=`MODE_PLAY? mode==`MODE_OVER? 12: mode==`MODE_SUCCESS? 5:11: sw_inferno && mode == `MODE_PLAY ? 9:score_4),
         .an(digit),
         .seg(display)
     );
@@ -535,13 +559,21 @@ module tetris(
     // and increments the score
     
 
-
+    reg [15:0] score;
     reg [`BITS_Y_POS-1:0] shifting_row;
     task remove_row;
         begin
             // Shift away remove_row_y
             mode <= `MODE_SHIFT;
             shifting_row <= remove_row_y;
+
+            // score <= score + shifting_row;
+
+            // score_4 <= score/1000;
+            // score_3 <= (score/100-(score/1000)*10);
+            // score_2 <= (score/10 - (score/100)*10);
+            // score_1 <= (score - (score/10)*10);
+
             // Increment the score
             if (score_1 == 9) begin
                 if (score_2 == 9) begin
@@ -579,6 +611,7 @@ module tetris(
         score_2 = 0;
         score_3 = 0;
         score_4 = 0;
+        score = 0;
     end
 
     // Starts a new game after a button is pressed in the MODE_IDLE state
@@ -586,6 +619,7 @@ module tetris(
         begin
             mode <= `MODE_PLAY;
             fallen_pieces <= 0;
+            score<=0;
             score_1 <= 0;
             score_2 <= 0;
             score_3 <= 0;

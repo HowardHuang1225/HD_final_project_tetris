@@ -39,7 +39,7 @@ module game_clock(
             end
         end
         else begin
-            tmp = 5000000;
+            tmp = 3000000;
         end
     end
 
