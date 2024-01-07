@@ -22,7 +22,8 @@ module tetris(
     output            audio_mclk, // master clock
     output            audio_lrck, // left-right clock
     output            audio_sck,  // serial clock
-    output            audio_sdin // serial audio data input
+    output            audio_sdin, // serial audio data input
+    output wire [15:0] LED
     );
 
     // The mode, used for finite state machine things. We also
@@ -188,6 +189,7 @@ module tetris(
     // so that it knows the right color, and the four positions on the
     // board that it covers. We also pass in fallen_pieces so that it can
     // display the fallen tetromino squares in monochrome.
+
     vga_display display_ (
         .clk(clkDiv2),
         .cur_piece(cur_piece),
@@ -246,13 +248,11 @@ module tetris(
         .been_ready(been_ready),
         .last_change(last_change),
         .key_down(keydown)
+        ,.piece(cur_piece)
     );
-    // .btn_left_en(btn_left_en),
-    //     .btn_right_en(btn_right_en),
-    //     .btn_rotate_en(btn_rotate_en),
-    //     .btn_down_en(btn_down_en),
-    //     .btn_drop_en(btn_drop_en),
-    // Set up the outputs for the calc_test_blk module
+    
+
+     
     wire [`BITS_BLK_POS-1:0] test_blk_1;
     wire [`BITS_BLK_POS-1:0] test_blk_2;
     wire [`BITS_BLK_POS-1:0] test_blk_3;
@@ -311,11 +311,142 @@ module tetris(
 
     // Rotates the current block if it would not cause any part of the
     // block to go off screen and would not intersect with any fallen blocks.
-    task rotate;
+        task rotate;
         begin
-            if (cur_pos_x + test_width < `BLOCKS_WIDE &&
-                cur_pos_y + test_height < `BLOCKS_HIGH &&
+            if (cur_pos_x + test_width <= `BLOCKS_WIDE &&
+                cur_pos_y + test_height <= `BLOCKS_HIGH &&
                 !test_intersects) begin
+                if (cur_piece == `I_BLOCK) begin
+                    if (cur_rot == 3) begin
+                        cur_pos_x <= cur_pos_x + 1;
+                        if (cur_pos_y > 0) cur_pos_y <= cur_pos_y - 1;
+                        else cur_pos_y <= cur_pos_y;
+                    end 
+                    else if (cur_rot == 0) begin
+                        if (`BLOCKS_WIDE - cur_pos_x <= 2)
+                            cur_pos_x <= `BLOCKS_WIDE - 4;
+                        else if (cur_pos_x < 1)
+                            cur_pos_x <= 1;
+                        else cur_pos_x <= cur_pos_x - 1;
+                        cur_pos_y <= cur_pos_y + 1;
+                    end
+                    else if (cur_rot == 1) begin
+                        cur_pos_x <= cur_pos_x + 2;
+                        cur_pos_y <= cur_pos_y - 2;
+                    end 
+                    else begin
+                        if (`BLOCKS_WIDE - cur_pos_x <= 1)
+                            cur_pos_x <= `BLOCKS_WIDE - 4;
+                        else if (cur_pos_x < 2)
+                            cur_pos_x <= 1;
+                        else cur_pos_x <= cur_pos_x - 2;
+                        cur_pos_y <= cur_pos_y + 2;
+                    end
+                end
+                else if (cur_piece == `T_BLOCK) begin
+                    if (cur_rot == 0) begin
+                        cur_pos_x <= cur_pos_x;
+                        if (cur_pos_y > 0) cur_pos_y <= cur_pos_y - 1;
+                        else cur_pos_y <= cur_pos_y;
+                    end 
+                    else if (cur_rot == 1) begin
+                        if (`BLOCKS_WIDE - cur_pos_x <= 2)
+                            cur_pos_x <= `BLOCKS_WIDE - 3;
+                        else cur_pos_x <= cur_pos_x;
+                        cur_pos_y <= cur_pos_y;
+                    end
+                    else if (cur_rot == 2) begin
+                        cur_pos_x <= cur_pos_x + 1;
+                        cur_pos_y <= cur_pos_y;
+                    end 
+                    else begin
+                        if (cur_pos_x > 0) cur_pos_x <= cur_pos_x - 1;
+                        else cur_pos_x <= 0;
+                        cur_pos_y <= cur_pos_y + 1;
+                    end
+                end else if (cur_piece == `S_BLOCK) begin
+                    if (cur_rot == 0) begin
+                        cur_pos_x <= cur_pos_x;
+                        cur_pos_y <= cur_pos_y;
+                    end 
+                    else if (cur_rot == 1) begin
+                        if (`BLOCKS_WIDE - cur_pos_x <= 2)
+                            cur_pos_x <= `BLOCKS_WIDE - 3;
+                        else cur_pos_x <= cur_pos_x;
+                        cur_pos_y <= cur_pos_y + 1;
+                    end
+                    else if (cur_rot == 2) begin
+                        cur_pos_x <= cur_pos_x + 1;
+                        if (cur_pos_y > 0) cur_pos_y <= cur_pos_y - 1;
+                        else cur_pos_y <= cur_pos_y;
+                    end 
+                    else begin
+                        if (cur_pos_x > 0) cur_pos_x <= cur_pos_x - 1;
+                        else cur_pos_x <= cur_pos_x;
+                        cur_pos_y <= cur_pos_y;
+                    end
+                end else if (cur_piece == `Z_BLOCK) begin
+                    if (cur_rot == 0) begin
+                        cur_pos_x <= cur_pos_x;
+                        cur_pos_y <= cur_pos_y;
+                    end 
+                    else if (cur_rot == 1) begin
+                        if (`BLOCKS_WIDE - cur_pos_x <= 2)
+                            cur_pos_x <= `BLOCKS_WIDE - 3;
+                        else cur_pos_x <= cur_pos_x;
+                        cur_pos_y <= cur_pos_y + 1;
+                    end
+                    else if (cur_rot == 2) begin
+                        cur_pos_x <= cur_pos_x + 1;
+                        if (cur_pos_y > 0) cur_pos_y <= cur_pos_y - 1;
+                        else cur_pos_y <= cur_pos_y;
+                    end 
+                    else begin
+                        if (cur_pos_x > 0) cur_pos_x <= cur_pos_x - 1;
+                        else cur_pos_x <= cur_pos_x;
+                        cur_pos_y <= cur_pos_y;
+                    end
+                end else if (cur_piece == `J_BLOCK) begin
+                    if (cur_rot == 0) begin
+                        if (`BLOCKS_WIDE - cur_pos_x <= 2) cur_pos_x <= `BLOCKS_WIDE - 3;
+                        else cur_pos_x <= cur_pos_x;
+                        cur_pos_y <= cur_pos_y;
+                    end 
+                    else if (cur_rot == 1) begin
+                        cur_pos_x <= cur_pos_x + 1;
+                        cur_pos_y <= cur_pos_y;
+                    end
+                    else if (cur_rot == 2) begin
+                        if (cur_pos_x > 0) cur_pos_x <= cur_pos_x - 1;
+                        else cur_pos_x <= cur_pos_x;
+                        cur_pos_y <= cur_pos_y + 1;
+                    end 
+                    else begin
+                        cur_pos_x<= cur_pos_x;
+                        if (cur_pos_y > 0) cur_pos_y <= cur_pos_y - 1;
+                        else cur_pos_y <= cur_pos_y;
+                    end
+                end else if (cur_piece == `L_BLOCK) begin
+                    if (cur_rot == 0) begin
+                        if (cur_pos_x > 0) cur_pos_x <= cur_pos_x - 1;
+                        else cur_pos_x <= cur_pos_x;
+                        cur_pos_y <= cur_pos_y + 1;
+                    end 
+                    else if (cur_rot == 1) begin
+                        cur_pos_x <= cur_pos_x;
+                        if (cur_pos_y > 0) cur_pos_y <= cur_pos_y - 1;
+                        else cur_pos_y <= cur_pos_y;
+                    end
+                    else if (cur_rot == 2) begin
+                        if (`BLOCKS_WIDE - cur_pos_x <= 2) cur_pos_x <= `BLOCKS_WIDE - 3;
+                        else cur_pos_x <= cur_pos_x;
+                        cur_pos_y <= cur_pos_y;
+                    end 
+                    else begin
+                        cur_pos_x <= cur_pos_x + 1;
+                        cur_pos_y <= cur_pos_y;
+                    end
+                end
                 cur_rot <= cur_rot + 1;
             end
         end
@@ -376,13 +507,18 @@ module tetris(
     // The 7-segment display module, which outputs the score
     seg_display score_display_ (
         .clk(clkDiv2),
-        .score_1(mode!=`MODE_PLAY? mode==`MODE_OVER? 15: 11:score_1),
-        .score_2(mode!=`MODE_PLAY? mode==`MODE_OVER? 14: 11:score_2),
-        .score_3(mode!=`MODE_PLAY? mode==`MODE_OVER? 13: 11:score_3),
-        .score_4(mode!=`MODE_PLAY? mode==`MODE_OVER? 12: 11:score_4),
+        .score_1(mode!=`MODE_PLAY? mode==`MODE_OVER? 15: mode==`MODE_SUCCESS? 5:11: sw_inferno&&mode==`MODE_PLAY ? 8:score_1),
+        .score_2(mode!=`MODE_PLAY? mode==`MODE_OVER? 14: mode==`MODE_SUCCESS? 5:11: sw_inferno&&mode==`MODE_PLAY ? 8:score_2),
+        .score_3(mode!=`MODE_PLAY? mode==`MODE_OVER? 13: mode==`MODE_SUCCESS? 5:11: sw_inferno&&mode==`MODE_PLAY ? 8:score_3),
+        .score_4(mode!=`MODE_PLAY? mode==`MODE_OVER? 12: mode==`MODE_SUCCESS? 5:11: sw_inferno&&mode==`MODE_PLAY ? 8:score_4),
         .an(digit),
         .seg(display)
     );
+
+
+    assign LED = (mode==`MODE_SUCCESS)? 16'b1111_1111_1111_1111: 16'b0000_0000_0000_0000;
+
+
     // The module that determines which row, if any, is complete
     // and needs to be removed and the score incremented
     wire [`BITS_Y_POS-1:0] remove_row_y;
@@ -397,6 +533,9 @@ module tetris(
 
     // This task removes the completed row from fallen_pieces
     // and increments the score
+    
+
+
     reg [`BITS_Y_POS-1:0] shifting_row;
     task remove_row;
         begin
@@ -459,48 +598,61 @@ module tetris(
     // intersects with a fallen block
     wire game_over = cur_pos_y == 0 && intersects_fallen_pieces(cur_blk_1, cur_blk_2, cur_blk_3, cur_blk_4);
 
+
+
+
+
+
+
+
     // Main game logic
     always @ (posedge clkDiv2) begin
         if (drop_timer < `DROP_TIMER_MAX) begin
             drop_timer <= drop_timer + 1;
         end
         game_clk_rst <= 0;
+
         if (mode == `MODE_IDLE && (start_1pulse)) begin
-            // We are in idle mode and the user has requested to start the game
             start_game();
-        end else if (mode == `MODE_OVER && (start_1pulse)) begin
-            // We are in idle mode and the user has requested to start the game
+        end
+        
+        else if (mode == `MODE_OVER && (start_1pulse)) begin
             mode = `MODE_IDLE;
-        end else if (rst_1pulse) begin
-            // We hit the reset switch or the game ended by itself,
-            // go into idle mode where we wait for the user to press a button
+        end
+        
+        else if (rst_1pulse) begin
             mode <= `MODE_IDLE;
             add_to_fallen_pieces();
             cur_piece <= `EMPTY_BLOCK;
-        end else if (game_over) begin
+        end
+        
+        else if (game_over) begin
             mode <= `MODE_OVER;
             add_to_fallen_pieces();
             cur_piece <= `EMPTY_BLOCK;
-        end else if ((sw_pause==1) && mode == `MODE_PLAY) begin
-            // If we switch on pause, save the old mode and enter
-            // the pause mode.
+        end
+
+        else if ((sw_pause==1) && mode == `MODE_PLAY) begin
             mode <= `MODE_PAUSE;
             old_mode <= mode;
-        end else if ((sw_pause==0) && mode == `MODE_PAUSE) begin
-            // If we switch off pause, enter the old mode
+        end
+        
+        else if ((sw_pause==0) && mode == `MODE_PAUSE) begin
             mode <= old_mode;
-        end else if (mode == `MODE_PLAY) begin
-            // Normal gameplay
+        end
+        
+        else if (mode == `MODE_PLAY) begin
             if (game_clk) begin
                 move_down();
-                if(sw_inferno) begin
-                    rotate();
-                end
+                // if(sw_inferno) begin
+                //     rotate();
+                // end
             end 
             
             else if (remove_row_en) begin
                 remove_row();
             end
+            //!---------------------------------------------------------------------------------
             else if(been_ready && key_down[last_change]) begin
                 if(last_change == 9'b0_0010_1001 && drop_timer == `DROP_TIMER_MAX) begin //space =>down
                     drop_to_bottom();
@@ -518,25 +670,43 @@ module tetris(
                     move_down();
                 end
             end
-        end else if (mode == `MODE_DROP) begin
-            // We are dropping the block until we hit respawn
-            // at the top
+            //!---------------------------------------------------------------------------------
+        end 
+        
+        else if (mode == `MODE_DROP) begin
             if (game_clk_rst && !sw_pause) begin
                 mode <= `MODE_PLAY;
-            end else begin
+            end 
+            else begin
                 move_down();
             end
-        end else if (mode == `MODE_SHIFT) begin
-            // We are shifting the row above shifting_row
-            // into shifting_row's position
+        end
+        
+        else if (mode == `MODE_SHIFT) begin
             if (shifting_row == 0) begin
                 fallen_pieces[0 +: `BLOCKS_WIDE] <= 0;
-                mode <= `MODE_PLAY;
-            end else begin
+                if(!sw_inferno) begin
+                    mode <= `MODE_PLAY;
+                end 
+                else begin
+                    mode <= `MODE_SUCCESS;
+                    add_to_fallen_pieces();
+                    cur_piece <= `EMPTY_BLOCK;
+                end
+            end 
+            
+            else begin
                 fallen_pieces[shifting_row*`BLOCKS_WIDE +: `BLOCKS_WIDE] <= fallen_pieces[(shifting_row - 1)*`BLOCKS_WIDE +: `BLOCKS_WIDE];
                 shifting_row <= shifting_row - 1;
             end
         end
+
+
+        //!-----------------------------------------------------------!//
+        else if(mode == `MODE_SUCCESS && start_1pulse) begin
+            mode <= `MODE_IDLE;
+        end
+        //!-----------------------------------------------------------!//
     end
 
 endmodule

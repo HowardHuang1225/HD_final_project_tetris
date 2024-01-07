@@ -67,7 +67,8 @@ module seg_display(
                 12: seg <= 7'b1000000;//O
                 13: seg <= 7'b1000001;//V
                 14: seg <= 7'b0000110;//E
-                15: seg <= 7'b1110111;//R
+                15: seg <= 7'b0001000;//R
+                16: seg <= 7'b0010010;//S
                 default: seg <= 7'b0111111;
             endcase
         end

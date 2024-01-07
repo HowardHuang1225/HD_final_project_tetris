@@ -76,7 +76,7 @@
 `define RED    12'hF00
 `define BLUE   12'h00F
 `define ORANGE 12'hFA0
-`define PINK 12'hE75480
+`define PINK 12'hFFC
 
 
 
@@ -92,6 +92,7 @@
 `define MODE_IDLE 3
 `define MODE_SHIFT 4
 `define MODE_OVER 5
+`define MODE_SUCCESS 6
 
 // The maximum value of the drop timer
 `define DROP_TIMER_MAX 10000
